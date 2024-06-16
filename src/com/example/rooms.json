@@ -1,0 +1,12 @@
+[
+  { "room_id": "1", "name": "Warsaw", "capacity": 50, "location": "Building 1, Floor 1", "available": true },
+  { "room_id": "2", "name": "Krakow", "capacity": 15, "location": "Building 1, Floor 2", "available": true },
+  { "room_id": "3", "name": "Lodz", "capacity": 6, "location": "Building 2, Floor 1", "available": true },
+  { "room_id": "4", "name": "Wroclaw", "capacity": 6, "location": "Building 2, Floor 2", "available": true },
+  { "room_id": "5", "name": "Poznan", "capacity": 6, "location": "Building 3, Floor 1", "available": true },
+  { "room_id": "6", "name": "Gdansk", "capacity": 4, "location": "Building 3, Floor 2", "available": true },
+  { "room_id": "7", "name": "Szczecin", "capacity": 4, "location": "Building 4, Floor 1", "available": true },
+  { "room_id": "8", "name": "Bydgoszcz", "capacity": 4, "location": "Building 4, Floor 2", "available": true },
+  { "room_id": "9", "name": "Lublin", "capacity": 2, "location": "Building 5, Floor 1", "available": true },
+  { "room_id": "10", "name": "Katowice", "capacity": 2, "location": "Building 5, Floor 2", "available": true }
+]
