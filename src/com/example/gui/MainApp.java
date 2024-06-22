@@ -10,12 +10,7 @@ import jade.wrapper.StaleProxyException;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -29,11 +24,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainApp extends Application {
-    private TextField roomField;
     private DatePicker datePicker;
     private ComboBox<String> startTimeComboBox;
     private ComboBox<String> endTimeComboBox;
     private ComboBox<String> capacityComboBox;
+    private List<CheckBox> equipmentCheckBoxes;
+    private Label recommendedRoomLabel;
+    private ComboBox<String> availableRoomsComboBox;
     private static AgentController userAgentController;
     private List<Room> rooms;
 
@@ -58,8 +55,6 @@ public class MainApp extends Application {
         vbox.setPadding(new Insets(10));
         vbox.setSpacing(8);
 
-        Label roomLabel = new Label("Room:");
-        roomField = new TextField();
         Label dateLabel = new Label("Date:");
         datePicker = new DatePicker();
         Label startTimeLabel = new Label("Start Time:");
@@ -68,6 +63,10 @@ public class MainApp extends Application {
         endTimeComboBox = new ComboBox<>();
         Label capacityLabel = new Label("Capacity:");
         capacityComboBox = new ComboBox<>();
+        Label equipmentLabel = new Label("Equipment:");
+        equipmentCheckBoxes = new ArrayList<>();
+        equipmentCheckBoxes.add(new CheckBox("Projector"));
+        equipmentCheckBoxes.add(new CheckBox("Whiteboard"));
 
         // Add time options to ComboBoxes
         populateTimeOptions(startTimeComboBox);
@@ -76,12 +75,23 @@ public class MainApp extends Application {
         // Add capacity options to ComboBox
         populateCapacityOptions(capacityComboBox);
 
+        Button autoAssignButton = new Button("Auto Recommend Room");
+        autoAssignButton.setOnAction(e -> autoAssignRoom());
+
+        recommendedRoomLabel = new Label("Recommended Room: None");
+
+        Label availableRoomsLabel = new Label("Choose Room:");
+        availableRoomsComboBox = new ComboBox<>();
+        populateAvailableRooms();
+
         Button submitButton = new Button("Submit Booking");
         submitButton.setOnAction(e -> submitBooking());
 
-        vbox.getChildren().addAll(roomLabel, roomField, dateLabel, datePicker, startTimeLabel, startTimeComboBox, endTimeLabel, endTimeComboBox, capacityLabel, capacityComboBox, submitButton);
+        vbox.getChildren().addAll(dateLabel, datePicker, startTimeLabel, startTimeComboBox, endTimeLabel, endTimeComboBox, capacityLabel, capacityComboBox, equipmentLabel);
+        equipmentCheckBoxes.forEach(vbox.getChildren()::add);
+        vbox.getChildren().addAll(autoAssignButton, recommendedRoomLabel, availableRoomsLabel, availableRoomsComboBox, submitButton);
 
-        Scene scene = new Scene(vbox, 300, 350);
+        Scene scene = new Scene(vbox, 400, 500);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
@@ -101,20 +111,124 @@ public class MainApp extends Application {
         comboBox.getItems().addAll("1-2", "2-6", "7-15", "16-50");
     }
 
-    private void submitBooking() {
-        String room = roomField.getText();
+    private void populateAvailableRooms() {
+        availableRoomsComboBox.getItems().clear();
+        for (Room room : rooms) {
+            availableRoomsComboBox.getItems().add(room.getName());
+        }
+    }
+
+    private void autoAssignRoom() {
         LocalDate date = datePicker.getValue();
         String startTime = startTimeComboBox.getValue();
         String endTime = endTimeComboBox.getValue();
-        String capacity = capacityComboBox.getValue();
+        String capacityStr = capacityComboBox.getValue();
 
-        if (!isValidRoom(room)) {
-            showAlert(Alert.AlertType.ERROR, "Validation Error", "Invalid room. Please book a valid room.");
+        if (date == null) {
+            showAlert(Alert.AlertType.ERROR, "Validation Error", "No date selected.");
             return;
         }
 
-        if (date == null || !isValidTime(startTime) || !isValidTime(endTime) || !isValidCapacity(capacity)) {
+        if (startTime == null || startTime.isEmpty() || endTime == null || endTime.isEmpty()) {
+            showAlert(Alert.AlertType.ERROR, "Validation Error", "Start time and end time must be selected.");
+            return;
+        }
+
+        if (!isValidTime(startTime) || !isValidTime(endTime) || !isValidCapacity(capacityStr)) {
+            showAlert(Alert.AlertType.ERROR, "Validation Error", "Invalid time or capacity.");
+            return;
+        }
+
+        int capacity = parseCapacity(capacityStr);
+
+        if (!isFutureDateTime(date, startTime) || !isValidTimeRange(startTime, endTime)) {
+            showAlert(Alert.AlertType.ERROR, "Validation Error", "Date and time must be in the future and valid.");
+            return;
+        }
+
+        // Auto-assign room based on user inputs
+        Room recommendedRoom = findRecommendedRoom(date, startTime, endTime, capacity);
+        if (recommendedRoom != null) {
+            recommendedRoomLabel.setText("Recommended Room: " + recommendedRoom.getName());
+        } else {
+            showAlert(Alert.AlertType.WARNING, "No Room Available", "No available room matches the criteria.");
+        }
+    }
+
+    private Room findRecommendedRoom(LocalDate date, String startTime, String endTime, int capacity) {
+        LocalTime start = LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm"));
+        LocalTime end = LocalTime.parse(endTime, DateTimeFormatter.ofPattern("HH:mm"));
+
+        for (Room room : rooms) {
+            if (room.isAvailable(date, start, end) && room.getCapacity() >= capacity) {
+                // Check if the room capacity matches the selected capacity range
+                switch (capacity) {
+                    case 2:
+                        if (room.getName().equals("Lublin") || room.getName().equals("Katowice")) {
+                            return room;
+                        }
+                        break;
+                    case 6:
+                        if (room.getName().equals("Lodz") || room.getName().equals("Wroclaw") || room.getName().equals("Poznan") || room.getName().equals("Gdansk") || room.getName().equals("Szczecin") || room.getName().equals("Bydgoszcz")) {
+                            return room;
+                        }
+                        break;
+                    case 15:
+                        if (room.getName().equals("Krakow")) {
+                            return room;
+                        }
+                        break;
+                    case 50:
+                        if (room.getName().equals("Warsaw")) {
+                            return room;
+                        }
+                        break;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void submitBooking() {
+        String roomName = availableRoomsComboBox.getValue();
+        if (roomName == null || roomName.isEmpty()) {
+            showAlert(Alert.AlertType.ERROR, "Validation Error", "No room selected.");
+            return;
+        }
+
+        LocalDate date = datePicker.getValue();
+        String startTime = startTimeComboBox.getValue();
+        String endTime = endTimeComboBox.getValue();
+        String capacityStr = capacityComboBox.getValue();
+
+        if (date == null) {
+            showAlert(Alert.AlertType.ERROR, "Validation Error", "No date selected.");
+            return;
+        }
+
+        if (startTime == null || startTime.isEmpty() || endTime == null || endTime.isEmpty()) {
+            showAlert(Alert.AlertType.ERROR, "Validation Error", "Start time and end time must be selected.");
+            return;
+        }
+
+        if (!isValidTime(startTime) || !isValidTime(endTime) || !isValidCapacity(capacityStr)) {
             showAlert(Alert.AlertType.ERROR, "Validation Error", "Invalid date, time, or capacity.");
+            return;
+        }
+
+        int capacity = parseCapacity(capacityStr);
+
+        Room selectedRoom = rooms.stream().filter(r -> r.getName().equals(roomName)).findFirst().orElse(null);
+        if (selectedRoom != null && (selectedRoom.getCapacity() < capacity || selectedRoom.getCapacity() > capacity)) {
+            showAlert(Alert.AlertType.ERROR, "Capacity Mismatch", "Selected room does not match the required capacity.");
+            return;
+        }
+
+        LocalTime start = LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm"));
+        LocalTime end = LocalTime.parse(endTime, DateTimeFormatter.ofPattern("HH:mm"));
+
+        if (!selectedRoom.isAvailable(date, start, end)) {
+            showAlert(Alert.AlertType.ERROR, "Availability Error", "Selected room is not available during the chosen time.");
             return;
         }
 
@@ -123,7 +237,9 @@ public class MainApp extends Application {
             return;
         }
 
-        String content = "Room: " + room + ", Date: " + date.toString() + ", Start Time: " + startTime + ", End Time: " + endTime + ", Capacity: " + capacity;
+        selectedRoom.addBooking(date, start, end);
+
+        String content = "Room: " + roomName + ", Date: " + date.toString() + ", Start Time: " + startTime + ", End Time: " + endTime + ", Capacity: " + capacityStr;
         ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
         AID receiver = new AID("UserAgent", AID.ISLOCALNAME);
         msg.addReceiver(receiver);
@@ -139,15 +255,6 @@ public class MainApp extends Application {
         } catch (StaleProxyException e) {
             e.printStackTrace();
         }
-    }
-
-    private boolean isValidRoom(String room) {
-        for (Room r : rooms) {
-            if (r.getName().equalsIgnoreCase(room)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean isValidTime(String timeStr) {
@@ -180,6 +287,21 @@ public class MainApp extends Application {
             return startTime.isBefore(endTime);
         } catch (DateTimeParseException e) {
             return false;
+        }
+    }
+
+    private int parseCapacity(String capacityStr) {
+        switch (capacityStr) {
+            case "1-2":
+                return 2;
+            case "2-6":
+                return 6;
+            case "7-15":
+                return 15;
+            case "16-50":
+                return 50;
+            default:
+                return 0;
         }
     }
 
