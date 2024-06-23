@@ -4,21 +4,29 @@ import com.example.Booking;
 import com.example.Room;
 import com.example.RoomLoader;
 import jade.core.AID;
-import jade.core.Agent;
-import jade.lang.acl.ACLMessage;
 import jade.wrapper.AgentController;
 import jade.wrapper.StaleProxyException;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.scene.layout.Priority;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -27,6 +35,8 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 
 public class MainApp extends Application {
     private DatePicker datePicker;
@@ -45,6 +55,7 @@ public class MainApp extends Application {
         MainApp.userAgentController = userAgentController;
     }
 
+
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Meeting Room Booking System");
@@ -58,9 +69,13 @@ public class MainApp extends Application {
             return;
         }
 
+        // Load existing bookings from file
+        loadBookingsFromFile();
+
         VBox vbox = new VBox();
-        vbox.setPadding(new Insets(10));
-        vbox.setSpacing(8);
+        vbox.setPadding(new Insets(20));
+        vbox.setSpacing(15);
+        vbox.getStyleClass().add("vbox");
 
         Label dateLabel = new Label("Date:");
         datePicker = new DatePicker();
@@ -103,20 +118,103 @@ public class MainApp extends Application {
         bookingList.setItems(bookings);
         updateBookingList(bookings);
 
+        // Adjust the size of the booking list
+        bookingList.setPrefWidth(400); // Set preferred width
+        bookingList.setPrefHeight(400); // Set preferred height
+
+        VBox.setVgrow(bookingList, Priority.ALWAYS); // Ensure the ListView grows vertically
+
         Button cancelButton = new Button("Cancel Booking");
         cancelButton.setOnAction(e -> cancelBooking(bookingList.getSelectionModel().getSelectedItem(), bookings));
 
-        // Layout adjustments to include the booking list and cancel button
-        HBox mainLayout = new HBox(10); // Horizontal layout with spacing
-        VBox rightLayout = new VBox(10);
-        rightLayout.getChildren().addAll(new Label("Bookings:"), bookingList, cancelButton);
+        String imagePath = "/Users/antoniozhou/Desktop/Agent system and application/Jade2024/Meeting-Room-Booking-System/img.png";
+        Image image = new Image("file:" + imagePath); // Use the absolute path to your image file
+        ImageView imageView = new ImageView(image);
+        imageView.setFitWidth(500); // Set desired width
+        imageView.setFitHeight(550); // Set desired height
+        imageView.setPreserveRatio(true);
+
+        VBox imageContainer = new VBox(imageView);
+        VBox.setVgrow(imageContainer, Priority.ALWAYS); // Ensure the VBox grows vertically
+        imageContainer.setAlignment(Pos.CENTER); // Center the image
+
+        // Layout adjustments to include the booking list, cancel button, and image
+        HBox mainLayout = new HBox(30); // Increased spacing for better layout
+        mainLayout.getStyleClass().add("hbox");
+        VBox rightLayout = new VBox(15);
+        rightLayout.getChildren().addAll(new Label("Bookings:"), bookingList, cancelButton, imageContainer);
+        VBox.setVgrow(rightLayout, Priority.ALWAYS); // Ensure the VBox grows vertically
         mainLayout.getChildren().addAll(vbox, rightLayout); // 'vbox' is from your existing setup
 
-        Scene scene = new Scene(mainLayout, 800, 500); // Adjusted for wider layout
+        Scene scene = new Scene(mainLayout, 800, 850); // Adjusted size for a more spacious layout
+        scene.getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
         primaryStage.setScene(scene);
         primaryStage.show();
+
+        primaryStage.setOnCloseRequest(event -> saveBookingsToFile()); // Save bookings on close
     }
 
+
+
+
+    private void saveBookingsToFile() {
+        JSONArray bookingsArray = new JSONArray();
+        for (Room room : rooms) {
+            for (Booking booking : room.getBookings()) {
+                JSONObject bookingObject = new JSONObject();
+                bookingObject.put("roomName", room.getName());
+                bookingObject.put("date", booking.getDate().toString());
+                bookingObject.put("startTime", booking.getStartTime().toString());
+                bookingObject.put("endTime", booking.getEndTime().toString());
+                bookingsArray.add(bookingObject);
+            }
+        }
+
+        try {
+            Files.write(Paths.get("bookings.json"), bookingsArray.toJSONString().getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadBookingsFromFile() {
+        if (!Files.exists(Paths.get("bookings.json"))) {
+            return;
+        }
+
+        try {
+            JSONParser parser = new JSONParser();
+            JSONArray bookingsArray = (JSONArray) parser.parse(new String(Files.readAllBytes(Paths.get("bookings.json"))));
+
+            boolean updated = false;  // Flag to track if any bookings were removed
+
+            for (Object obj : bookingsArray) {
+                JSONObject bookingObject = (JSONObject) obj;
+                String roomName = (String) bookingObject.get("roomName");
+                LocalDate date = LocalDate.parse((String) bookingObject.get("date"));
+                LocalTime startTime = LocalTime.parse((String) bookingObject.get("startTime"));
+                LocalTime endTime = LocalTime.parse((String) bookingObject.get("endTime"));
+
+                // Check if the booking has already ended
+                if (LocalDateTime.of(date, endTime).isBefore(LocalDateTime.now())) {
+                    updated = true;
+                    continue;
+                }
+
+                Room room = rooms.stream().filter(r -> r.getName().equals(roomName)).findFirst().orElse(null);
+                if (room != null) {
+                    room.addBooking(date, startTime, endTime);
+                }
+            }
+
+            // If any outdated bookings were removed, save the updated list back to the file
+            if (updated) {
+                saveBookingsToFile();
+            }
+        } catch (IOException | ParseException e) {
+            e.printStackTrace();
+        }
+    }
 
     private void updateBookingList(ObservableList<String> bookings) {
         bookings.clear();
@@ -146,14 +244,13 @@ public class MainApp extends Application {
         if (room != null) {
             if (room.cancelBooking(date, startTime, endTime)) {
                 updateBookingList(bookings);
+                saveBookingsToFile();  // Save bookings after cancellation
                 showAlert(Alert.AlertType.INFORMATION, "Booking Cancelled", "The booking has been successfully cancelled.");
             } else {
                 showAlert(Alert.AlertType.ERROR, "Cancellation Failed", "Could not cancel the selected booking.");
             }
         }
     }
-
-
 
     private void populateTimeOptions(ComboBox<String> comboBox) {
         List<String> timeOptions = new ArrayList<>();
@@ -289,7 +386,20 @@ public class MainApp extends Application {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirm Booking");
         alert.setHeaderText("Confirm your booking details:");
-        alert.setContentText("Room: " + roomName + "\nDate: " + date.toString() + "\nStart Time: " + startTime + "\nEnd Time: " + endTime + "\nCapacity: " + capacityStr);
+
+        // Create normal text for the booking details
+        Text details = new Text("Room: " + roomName + "\nDate: " + date.toString() + "\nStart Time: " + startTime + "\nEnd Time: " + endTime + "\nCapacity: " + capacityStr + "\n\n");
+
+        // Create styled text for the warning message
+        Text warning = new Text("Note: If the room size is much larger than the number of attendees, please choose carefully.");
+        warning.setFill(javafx.scene.paint.Color.RED);
+        warning.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 12));
+
+        // Combine both texts in a TextFlow
+        TextFlow textFlow = new TextFlow(details, warning);
+
+        // Set the content of the alert dialog
+        alert.getDialogPane().setContent(textFlow);
 
         ButtonType buttonTypeConfirm = new ButtonType("Confirm Booking", ButtonBar.ButtonData.OK_DONE);
         ButtonType buttonTypeCancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
@@ -320,16 +430,16 @@ public class MainApp extends Application {
         selectedRoom.addBooking(date, start, end);
 
         // Ensure you update the observable list for the ListView
-
         updateBookingList(bookings);  // Assuming `bookings` is your ObservableList linked to ListView
+
+        saveBookingsToFile();  // Save bookings after new booking is added
 
         sendBookingDetails(date, startTime, endTime, roomName, capacityStr);
         showAlert(Alert.AlertType.INFORMATION, "Booking Confirmed", "Your booking has been successfully added.");
     }
 
-
     private void sendBookingDetails(LocalDate date, String startTime, String endTime, String roomName, String capacityStr) {
-        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+        jade.lang.acl.ACLMessage msg = new jade.lang.acl.ACLMessage(jade.lang.acl.ACLMessage.INFORM);
         AID receiver = new AID("UserAgent", AID.ISLOCALNAME);
         msg.addReceiver(receiver);
         String content = "Booking confirmed for room " + roomName +
@@ -347,7 +457,6 @@ public class MainApp extends Application {
             e.printStackTrace();
         }
     }
-
 
     private boolean isValidTime(String timeStr) {
         try {
