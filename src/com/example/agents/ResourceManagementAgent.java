@@ -1,6 +1,5 @@
 package com.example.agents;
 
-import com.example.gui.ResourceRequestApp;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.lang.acl.ACLMessage;
@@ -14,7 +13,7 @@ public class ResourceManagementAgent extends Agent {
                 ACLMessage msg = receive();
                 if (msg != null) {
                     System.out.println("ResourceManagementAgent received: " + msg.getContent());
-                    launchResourceGUI(msg.getContent());
+
                 } else {
                     block();
                 }
@@ -22,7 +21,4 @@ public class ResourceManagementAgent extends Agent {
         });
     }
 
-    private void launchResourceGUI(String content) {
-        ResourceRequestApp.launchResourceGUI(content);
-    }
 }

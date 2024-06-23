@@ -17,6 +17,10 @@ public class Room {
         this.bookings = new ArrayList<>();
     }
 
+    public boolean cancelBooking(LocalDate date, LocalTime startTime, LocalTime endTime) {
+        return bookings.removeIf(b -> b.getDate().equals(date) && b.getStartTime().equals(startTime) && b.getEndTime().equals(endTime));
+    }
+
     // Getters and Setters
     public String getRoom_id() {
         return room_id;
@@ -76,33 +80,3 @@ public class Room {
     }
 }
 
-class Booking {
-    private LocalDate date;
-    private LocalTime startTime;
-    private LocalTime endTime;
-
-    public Booking(LocalDate date, LocalTime startTime, LocalTime endTime) {
-        this.date = date;
-        this.startTime = startTime;
-        this.endTime = endTime;
-    }
-
-    public LocalDate getDate() {
-        return date;
-    }
-
-    public LocalTime getStartTime() {
-        return startTime;
-    }
-
-    public LocalTime getEndTime() {
-        return endTime;
-    }
-
-    public boolean isOverlapping(LocalDate date, LocalTime startTime, LocalTime endTime) {
-        if (!this.date.equals(date)) {
-            return false;
-        }
-        return !startTime.isAfter(this.endTime) && !endTime.isBefore(this.startTime);
-    }
-}
