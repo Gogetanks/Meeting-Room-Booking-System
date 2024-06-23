@@ -1,1 +1,1 @@
-http://localhost:7778/acc
+http://Mevin:7778/acc

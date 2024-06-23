@@ -1,67 +1,59 @@
 .root {
     -fx-font-family: "Roboto", sans-serif;
-    -fx-font-size: 14px;
-    -fx-padding: 20;
+    -fx-font-size: 12px; /* was 14px */
+    -fx-padding: 10; /* was 20 */
     -fx-background-color: #F5F5F5;
 }
 
 .label {
     -fx-text-fill: #333;
-    -fx-font-size: 16px;
-    -fx-padding: 5 0;
+    -fx-font-size: 14px; /* was 16px */
+    -fx-padding: 3 0; /* was 5 0 */
 }
 
 .button {
     -fx-background-color: #6200EE;
     -fx-text-fill: white;
-    -fx-padding: 10 20;
-    -fx-font-size: 14px;
-    -fx-background-radius: 5;
-    -fx-border-radius: 5;
+    -fx-padding: 8 15; /* was 10 20 */
+    -fx-font-size: 12px; /* was 14px */
+    -fx-background-radius: 4; /* was 5 */
+    -fx-border-radius: 4; /* was 5 */
 }
 
 .button:hover {
     -fx-background-color: #3700B3;
 }
 
-.combo-box, .date-picker, .list-view {
-    -fx-pref-width: 200px;
+.combo-box, .date-picker, .list-view, .text-field {
+    -fx-pref-width: 180px; /* was 200px */
     -fx-background-color: white;
-    -fx-padding: 5;
+    -fx-padding: 4; /* was 5 */
     -fx-border-color: #DDDDDD;
-    -fx-border-radius: 5;
-}
-
-.text-field {
-    -fx-pref-width: 200px;
-    -fx-background-color: white;
-    -fx-padding: 5;
-    -fx-border-color: #DDDDDD;
-    -fx-border-radius: 5;
+    -fx-border-radius: 4; /* was 5 */
 }
 
 .check-box {
-    -fx-padding: 5 0;
+    -fx-padding: 3 0; /* was 5 0 */
 }
 
 .vbox {
-    -fx-spacing: 15;
+    -fx-spacing: 10; /* was 15 */
 }
 
 .hbox {
-    -fx-spacing: 30;
-    -fx-padding: 20 0;
+    -fx-spacing: 20; /* was 30 */
+    -fx-padding: 10 0; /* was 20 0 */
 }
 
 .list-view {
     -fx-background-color: white;
     -fx-border-color: #DDDDDD;
-    -fx-border-radius: 5;
-    -fx-padding: 10;
+    -fx-border-radius: 4; /* was 5 */
+    -fx-padding: 8; /* was 10 */
 }
 
 .alert {
     -fx-background-color: #FFF3CD;
     -fx-border-color: #FFEEBA;
-    -fx-border-radius: 5;
+    -fx-border-radius: 4; /* was 5 */
 }
