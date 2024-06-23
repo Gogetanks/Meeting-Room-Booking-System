@@ -29,6 +29,9 @@ public class Main {
                 AgentController roomManagementAgent = mainContainer.createNewAgent("RoomManagementAgent", "com.example.agents.RoomManagementAgent", null);
                 roomManagementAgent.start();
 
+                AgentController notificationAgent = mainContainer.createNewAgent("NotificationAgent", "com.example.agents.NotificationAgent", null);
+                notificationAgent.start();
+
                 MainApp.setUserAgentController(userAgent);
             } catch (StaleProxyException e) {
                 e.printStackTrace();

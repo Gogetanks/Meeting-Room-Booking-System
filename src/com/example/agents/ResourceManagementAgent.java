@@ -7,6 +7,7 @@ import jade.lang.acl.ACLMessage;
 public class ResourceManagementAgent extends Agent {
     @Override
     protected void setup() {
+        System.out.println("RoomManagementAgent " + getAID().getName() + " is ready.");
         addBehaviour(new CyclicBehaviour() {
             @Override
             public void action() {

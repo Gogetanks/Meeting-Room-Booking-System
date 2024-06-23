@@ -216,6 +216,8 @@ public class MainApp extends Application {
         }
     }
 
+
+
     private void updateBookingList(ObservableList<String> bookings) {
         bookings.clear();
         for (Room room : rooms) {
